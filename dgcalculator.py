@@ -31,13 +31,15 @@ if uploaded_file:
         st.error("The Mains Fail sheet does not have the required columns.")
         st.stop()
 
-    # Step 3: Convert Start Time to datetime and handle errors
+    # Step 3: Convert Start Time and End Time to datetime and handle errors
     dg_data['Start Time'] = pd.to_datetime(dg_data['Start Time'], errors='coerce')
+    dg_data['End Time'] = pd.to_datetime(dg_data['End Time'], errors='coerce')
     mains_fail_data['Start Time'] = pd.to_datetime(mains_fail_data['Start Time'], errors='coerce')
+    mains_fail_data['End Time'] = pd.to_datetime(mains_fail_data['End Time'], errors='coerce')
 
-    # Drop rows with invalid or missing Start Time
-    dg_data = dg_data.dropna(subset=['Start Time'])
-    mains_fail_data = mains_fail_data.dropna(subset=['Start Time'])
+    # Drop rows with invalid or missing Start Time or End Time
+    dg_data = dg_data.dropna(subset=['Start Time', 'End Time'])
+    mains_fail_data = mains_fail_data.dropna(subset=['Start Time', 'End Time'])
 
     # Extract the date part
     dg_data['Date'] = dg_data['Start Time'].dt.date
@@ -52,42 +54,50 @@ if uploaded_file:
     # Display DG data by date in the first column
     with col1:
         st.header("DG Data by Date")
+        dg_tables = {}
         for date in unique_dates:
             dg_filtered = dg_data[dg_data['Date'] == date]
             if not dg_filtered.empty:
                 st.subheader(f"Date: {date}")
                 st.dataframe(dg_filtered)
+                dg_tables[date] = dg_filtered
 
     # Display Mains Fail data by date in the second column
     with col2:
         st.header("Mains Fail Data by Date")
+        mains_fail_tables = {}
         for date in unique_dates:
             mains_fail_filtered = mains_fail_data[mains_fail_data['Date'] == date]
             if not mains_fail_filtered.empty:
                 st.subheader(f"Date: {date}")
                 st.dataframe(mains_fail_filtered)
+                mains_fail_tables[date] = mains_fail_filtered
 
-    # Step 4: Match Data and Display Results
+    # Step 4: Match Data by Date and Display Results
     st.header("Matched Data by Date")
     results = []
 
     for date in unique_dates:
-        dg_filtered = dg_data[dg_data['Date'] == date]
-        mains_fail_filtered = mains_fail_data[mains_fail_data['Date'] == date]
+        dg_filtered = dg_tables.get(date, pd.DataFrame())
+        mains_fail_filtered = mains_fail_tables.get(date, pd.DataFrame())
 
-        # Find common Site Alias
-        common_sites = pd.merge(
-            dg_filtered, mains_fail_filtered,
-            on=['Site Alias', 'Zone', 'Cluster'],
-            suffixes=('_DG', '_MainsFail')
-        )
+        if not dg_filtered.empty and not mains_fail_filtered.empty:
+            # Find common Site Alias and corresponding Zone, Cluster, and Start Time
+            common_sites = pd.merge(
+                dg_filtered, mains_fail_filtered,
+                on=['Site Alias', 'Zone', 'Cluster'],
+                suffixes=('_DG', '_MainsFail')
+            )
 
-        if not common_sites.empty:
-            st.subheader(f"Date: {date}")
-            st.dataframe(common_sites)
+            if not common_sites.empty:
+                st.subheader(f"Matched Data for Date: {date}")
+                st.dataframe(common_sites[[
+                    'Site Alias', 'Zone', 'Cluster',
+                    'Start Time_DG', 'Start Time_MainsFail'
+                ]])
 
-            # Store results for download
-            results.append((date, common_sites))
+                # Store results for download
+                results.append((date, common_sites))
 
     # Step 5: Provide Download Option
     if results:
