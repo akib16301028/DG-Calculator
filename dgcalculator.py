@@ -93,8 +93,8 @@ if uploaded_file:
                     if dg_row['Site Alias'] == mf_row['Site Alias']:
                         time_difference = (dg_row['Start Time'] - mf_row['Start Time']).total_seconds() / 60  # Time difference in minutes
                         classification = (
-                            "Before" if time_difference >= 30 else 
-                            "After" if time_difference <= -30 else 
+                            "DG after MF" if time_difference >= 30 else 
+                            "High DG" if time_difference <= -30 else 
                             "Within 30 mins"
                         )
                         matched_entries.append({
@@ -118,6 +118,11 @@ if uploaded_file:
     # Step 5: Provide Download Option
     if results:
         with pd.ExcelWriter("matched_data.xlsx") as writer:
+            # Save DG and Mains Fail data
+            dg_data.to_excel(writer, sheet_name="DG Data", index=False)
+            mains_fail_data.to_excel(writer, sheet_name="Mains Fail Data", index=False)
+
+            # Save matched data
             for date, result in results:
                 result.to_excel(writer, sheet_name=str(date), index=False)
 
