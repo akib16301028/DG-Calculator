@@ -31,9 +31,17 @@ if uploaded_file:
         st.error("The Mains Fail sheet does not have the required columns.")
         st.stop()
 
-    # Step 3: Process Start Time to Extract Dates
-    dg_data['Date'] = pd.to_datetime(dg_data['Start Time']).dt.date
-    mains_fail_data['Date'] = pd.to_datetime(mains_fail_data['Start Time']).dt.date
+    # Step 3: Convert Start Time to datetime and handle errors
+    dg_data['Start Time'] = pd.to_datetime(dg_data['Start Time'], errors='coerce')
+    mains_fail_data['Start Time'] = pd.to_datetime(mains_fail_data['Start Time'], errors='coerce')
+
+    # Drop rows with invalid or missing Start Time
+    dg_data = dg_data.dropna(subset=['Start Time'])
+    mains_fail_data = mains_fail_data.dropna(subset=['Start Time'])
+
+    # Extract the date part
+    dg_data['Date'] = dg_data['Start Time'].dt.date
+    mains_fail_data['Date'] = mains_fail_data['Start Time'].dt.date
 
     # Find unique dates
     unique_dates = sorted(set(dg_data['Date']).union(mains_fail_data['Date']))
