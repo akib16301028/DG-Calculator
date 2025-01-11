@@ -73,8 +73,8 @@ if uploaded_file:
                 st.subheader(f"Date: {date}")
                 st.dataframe(mains_fail_filtered)
 
-    # Step 4: Match Data by Date and Nearest Start Time
-    st.header("Matched Data by Date and Nearest Time")
+    # Step 4: Match Data by Date and Nearest Start Time Within 2-Hour Window
+    st.header("Matched Data by Date and Nearest Time (±2 Hours)")
     results = []
 
     for date in unique_dates:
@@ -85,10 +85,11 @@ if uploaded_file:
             matched_entries = []
 
             for _, dg_row in dg_filtered.iterrows():
-                # Find the nearest Start Time in Mains Fail data
-                mains_fail_row = mains_fail_filtered.iloc[(mains_fail_filtered['Start Time'] - dg_row['Start Time']).abs().argsort()[:1]]
+                # Filter Mains Fail data within a 2-hour window of DG Start Time
+                time_window = mains_fail_filtered[(mains_fail_filtered['Start Time'] >= dg_row['Start Time'] - pd.Timedelta(hours=2)) &
+                                                  (mains_fail_filtered['Start Time'] <= dg_row['Start Time'] + pd.Timedelta(hours=2))]
 
-                for _, mf_row in mains_fail_row.iterrows():
+                for _, mf_row in time_window.iterrows():
                     if dg_row['Site Alias'] == mf_row['Site Alias']:
                         matched_entries.append({
                             'Site Alias': dg_row['Site Alias'],
