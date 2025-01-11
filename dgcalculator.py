@@ -51,25 +51,24 @@ def main():
                 # Save processed data for this sheet
                 processed_sheets[sheet_name] = df_unique
 
-          # Save processed sheets and combined data into a single Excel file
-if processed_sheets:
-    output_file = pd.ExcelWriter("processed_data.xlsx", engine='xlsxwriter')
-    for sheet_name, df_unique in processed_sheets.items():
-        df_unique.to_excel(output_file, sheet_name=sheet_name, index=False)
-    combined_data.to_excel(output_file, sheet_name="Combined Data", index=False)
-    
-    # Use close() instead of save()
-    output_file.close()
+            # Combine all processed sheets into a single DataFrame
+            combined_data = pd.concat(processed_sheets.values(), ignore_index=True)
 
-    with open("processed_data.xlsx", "rb") as f:
-        st.download_button(
-            label="Download Processed Data as Excel",
-            data=f,
-            file_name="processed_data.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+            # Save processed sheets and combined data into a single Excel file
+            if processed_sheets:
+                output_file = pd.ExcelWriter("processed_data.xlsx", engine='xlsxwriter')
+                for sheet_name, df_unique in processed_sheets.items():
+                    df_unique.to_excel(output_file, sheet_name=sheet_name, index=False)
+                combined_data.to_excel(output_file, sheet_name="Combined Data", index=False)
+                output_file.close()  # Use close() to save and finalize the file
 
-
+                with open("processed_data.xlsx", "rb") as f:
+                    st.download_button(
+                        label="Download Processed Data as Excel",
+                        data=f,
+                        file_name="processed_data.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    )
 
         else:
             # Handle single-sheet files (CSV or single-sheet Excel)
