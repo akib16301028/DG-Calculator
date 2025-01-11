@@ -45,11 +45,13 @@ if uploaded_file:
     dg_data['Date'] = dg_data['Start Time'].dt.date
     mains_fail_data['Date'] = mains_fail_data['Start Time'].dt.date
 
-    # Find unique dates
-    unique_dates = sorted(set(dg_data['Date']).union(mains_fail_data['Date']))
+    # Step 4: Filter data to keep only the latest Start Time for duplicates
+    dg_data = dg_data.sort_values(by='Start Time', ascending=False).drop_duplicates(subset=['Site Alias'], keep='first')
+    mains_fail_data = mains_fail_data.sort_values(by='Start Time', ascending=False).drop_duplicates(subset=['Site Alias'], keep='first')
 
-    # Step 4: Match Data by Date and Display Results
+    # Step 5: Match Data by Date and Display Results
     st.header("Matched Data by Date")
+    unique_dates = sorted(set(dg_data['Date']).union(mains_fail_data['Date']))
     results = []
 
     for date in unique_dates:
@@ -72,17 +74,22 @@ if uploaded_file:
                 filtered_sites = common_sites[common_sites['Difference'] <= -30]
 
                 if not filtered_sites.empty:
+                    # Count occurrences and calculate total time
+                    filtered_sites['Occurrence Count'] = filtered_sites.groupby('Site Alias')['Site Alias'].transform('size')
+                    filtered_sites['Total Time (Minutes)'] = filtered_sites.groupby('Site Alias')['Difference'].transform(lambda x: abs(x).sum())
+
                     st.subheader(f"Filtered Data for Date: {date}")
                     filtered_sites['Difference (Minutes)'] = filtered_sites['Difference'].apply(lambda x: f"{int(abs(x))} minutes")
                     st.dataframe(filtered_sites[[
                         'Site Alias', 'Zone', 'Cluster',
-                        'Start Time_DG', 'Start Time_MainsFail', 'Difference (Minutes)'
+                        'Start Time_DG', 'Start Time_MainsFail', 'Difference (Minutes)', 
+                        'Occurrence Count', 'Total Time (Minutes)'
                     ]])
 
                     # Store results for download
                     results.append((date, filtered_sites))
 
-    # Step 5: Provide Download Option
+    # Step 6: Provide Download Option
     if results:
         with pd.ExcelWriter("filtered_data.xlsx") as writer:
             for date, result in results:
