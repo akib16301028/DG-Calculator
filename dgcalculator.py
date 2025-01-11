@@ -68,27 +68,31 @@ if uploaded_file:
                 # Calculate the time difference
                 common_sites['Difference'] = (common_sites['Start Time_DG'] - common_sites['Start Time_MainsFail']).dt.total_seconds() / 60.0
 
-                st.subheader(f"Matched Data for Date: {date}")
-                st.dataframe(common_sites[[
-                    'Site Alias', 'Zone', 'Cluster',
-                    'Start Time_DG', 'Start Time_MainsFail', 'Difference'
-                ]])
+                # Filter for rows where Start Time_DG is 30 or more minutes before Start Time_MainsFail
+                filtered_sites = common_sites[common_sites['Difference'] <= -30]
 
-                # Store results for download
-                results.append((date, common_sites))
+                if not filtered_sites.empty:
+                    st.subheader(f"Filtered Data for Date: {date}")
+                    st.dataframe(filtered_sites[[
+                        'Site Alias', 'Zone', 'Cluster',
+                        'Start Time_DG', 'Start Time_MainsFail', 'Difference'
+                    ]])
+
+                    # Store results for download
+                    results.append((date, filtered_sites))
 
     # Step 5: Provide Download Option
     if results:
-        with pd.ExcelWriter("matched_data.xlsx") as writer:
+        with pd.ExcelWriter("filtered_data.xlsx") as writer:
             for date, result in results:
                 result.to_excel(writer, sheet_name=str(date), index=False)
 
-        with open("matched_data.xlsx", "rb") as file:
+        with open("filtered_data.xlsx", "rb") as file:
             st.download_button(
-                label="Download Matched Data",
+                label="Download Filtered Data",
                 data=file,
-                file_name="matched_data.xlsx",
+                file_name="filtered_data.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
     else:
-        st.info("No common Site Alias found for any date.")
+        st.info("No Site Alias found with the specified time difference condition.")
