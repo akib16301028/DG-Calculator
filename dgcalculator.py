@@ -48,38 +48,13 @@ if uploaded_file:
     # Find unique dates
     unique_dates = sorted(set(dg_data['Date']).union(mains_fail_data['Date']))
 
-    # Split the page into two columns
-    col1, col2 = st.columns(2)
-
-    # Display DG data by date in the first column
-    with col1:
-        st.header("DG Data by Date")
-        dg_tables = {}
-        for date in unique_dates:
-            dg_filtered = dg_data[dg_data['Date'] == date]
-            if not dg_filtered.empty:
-                st.subheader(f"Date: {date}")
-                st.dataframe(dg_filtered)
-                dg_tables[date] = dg_filtered
-
-    # Display Mains Fail data by date in the second column
-    with col2:
-        st.header("Mains Fail Data by Date")
-        mains_fail_tables = {}
-        for date in unique_dates:
-            mains_fail_filtered = mains_fail_data[mains_fail_data['Date'] == date]
-            if not mains_fail_filtered.empty:
-                st.subheader(f"Date: {date}")
-                st.dataframe(mains_fail_filtered)
-                mains_fail_tables[date] = mains_fail_filtered
-
     # Step 4: Match Data by Date and Display Results
     st.header("Matched Data by Date")
     results = []
 
     for date in unique_dates:
-        dg_filtered = dg_tables.get(date, pd.DataFrame())
-        mains_fail_filtered = mains_fail_tables.get(date, pd.DataFrame())
+        dg_filtered = dg_data[dg_data['Date'] == date]
+        mains_fail_filtered = mains_fail_data[mains_fail_data['Date'] == date]
 
         if not dg_filtered.empty and not mains_fail_filtered.empty:
             # Find common Site Alias and corresponding Zone, Cluster, and Start Time
