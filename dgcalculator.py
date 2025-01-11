@@ -65,10 +65,13 @@ if uploaded_file:
             )
 
             if not common_sites.empty:
+                # Calculate the time difference
+                common_sites['Difference'] = (common_sites['Start Time_DG'] - common_sites['Start Time_MainsFail']).dt.total_seconds() / 60.0
+
                 st.subheader(f"Matched Data for Date: {date}")
                 st.dataframe(common_sites[[
                     'Site Alias', 'Zone', 'Cluster',
-                    'Start Time_DG', 'Start Time_MainsFail'
+                    'Start Time_DG', 'Start Time_MainsFail', 'Difference'
                 ]])
 
                 # Store results for download
