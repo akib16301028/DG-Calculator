@@ -45,11 +45,7 @@ if uploaded_file:
     dg_data['Date'] = dg_data['Start Time'].dt.date
     mains_fail_data['Date'] = mains_fail_data['Start Time'].dt.date
 
-    # Step 4: Filter data to keep only the latest Start Time for duplicates
-    dg_data = dg_data.sort_values(by='Start Time', ascending=False).drop_duplicates(subset=['Site Alias'], keep='first')
-    mains_fail_data = mains_fail_data.sort_values(by='Start Time', ascending=False).drop_duplicates(subset=['Site Alias'], keep='first')
-
-    # Step 5: Match Data by Date and Display Results
+    # Step 4: Match Data by Date and Display Results
     st.header("Matched Data by Date")
     unique_dates = sorted(set(dg_data['Date']).union(mains_fail_data['Date']))
     results = []
@@ -59,37 +55,53 @@ if uploaded_file:
         mains_fail_filtered = mains_fail_data[mains_fail_data['Date'] == date]
 
         if not dg_filtered.empty and not mains_fail_filtered.empty:
-            # Find common Site Alias and corresponding Zone, Cluster, and Start Time
-            common_sites = pd.merge(
-                dg_filtered, mains_fail_filtered,
-                on=['Site Alias', 'Zone', 'Cluster'],
-                suffixes=('_DG', '_MainsFail')
-            )
+            # Initialize the matched data list
+            matched_data = []
 
-            if not common_sites.empty:
-                # Calculate the time difference
-                common_sites['Difference'] = (common_sites['Start Time_DG'] - common_sites['Start Time_MainsFail']).dt.total_seconds() / 60.0
+            # Group by Site Alias
+            for site_alias, dg_group in dg_filtered.groupby('Site Alias'):
+                mains_group = mains_fail_filtered[mains_fail_filtered['Site Alias'] == site_alias]
 
-                # Filter for rows where Start Time_DG is 30 or more minutes before Start Time_MainsFail
-                filtered_sites = common_sites[common_sites['Difference'] <= -30]
+                if not mains_group.empty:
+                    # Sort both DG and Mains Fail data by Start Time
+                    dg_group = dg_group.sort_values('Start Time')
+                    mains_group = mains_group.sort_values('Start Time')
 
-                if not filtered_sites.empty:
-                    # Count occurrences and calculate total time
-                    filtered_sites['Occurrence Count'] = filtered_sites.groupby('Site Alias')['Site Alias'].transform('size')
-                    filtered_sites['Total Time (Minutes)'] = filtered_sites.groupby('Site Alias')['Difference'].transform(lambda x: abs(x).sum())
+                    # Sequentially match DG and Mains Fail events
+                    for _, dg_row in dg_group.iterrows():
+                        # Find the first Mains Fail Start Time after the current DG Start Time
+                        matched_mains_row = mains_group[mains_group['Start Time'] > dg_row['Start Time']].iloc[0:1]
 
-                    st.subheader(f"Filtered Data for Date: {date}")
-                    filtered_sites['Difference (Minutes)'] = filtered_sites['Difference'].apply(lambda x: f"{int(abs(x))} minutes")
-                    st.dataframe(filtered_sites[[
-                        'Site Alias', 'Zone', 'Cluster',
-                        'Start Time_DG', 'Start Time_MainsFail', 'Difference (Minutes)', 
-                        'Occurrence Count', 'Total Time (Minutes)'
-                    ]])
+                        if not matched_mains_row.empty:
+                            mains_start_time = matched_mains_row['Start Time'].values[0]
+                            time_difference = (dg_row['Start Time'] - mains_start_time).total_seconds() / 60.0
 
-                    # Store results for download
-                    results.append((date, filtered_sites))
+                            # Keep only if time difference is 30 minutes or more
+                            if time_difference <= -30:
+                                matched_data.append({
+                                    'Site Alias': site_alias,
+                                    'Zone': dg_row['Zone'],
+                                    'Cluster': dg_row['Cluster'],
+                                    'Start Time_DG': dg_row['Start Time'],
+                                    'Start Time_MainsFail': mains_start_time,
+                                    'Difference (Minutes)': int(abs(time_difference))
+                                })
 
-    # Step 6: Provide Download Option
+                                # Remove matched Mains Fail entry to ensure one-to-one mapping
+                                mains_group = mains_group[mains_group['Start Time'] != mains_start_time]
+
+            if matched_data:
+                matched_df = pd.DataFrame(matched_data)
+                matched_df['Occurrence Count'] = matched_df.groupby('Site Alias')['Site Alias'].transform('size')
+                matched_df['Total Time (Minutes)'] = matched_df.groupby('Site Alias')['Difference (Minutes)'].transform('sum')
+
+                st.subheader(f"Matched Data for Date: {date}")
+                st.dataframe(matched_df)
+
+                # Store results for download
+                results.append((date, matched_df))
+
+    # Step 5: Provide Download Option
     if results:
         with pd.ExcelWriter("filtered_data.xlsx") as writer:
             for date, result in results:
