@@ -54,21 +54,21 @@ def main():
             # Combine all processed sheets into a single DataFrame
             combined_data = pd.concat(processed_sheets.values(), ignore_index=True)
 
-            # Save processed sheets and combined data into a single Excel file
             if processed_sheets:
-                output_file = pd.ExcelWriter("processed_data.xlsx", engine='xlsxwriter')
-                for sheet_name, df_unique in processed_sheets.items():
-                    df_unique.to_excel(output_file, sheet_name=sheet_name, index=False)
-                combined_data.to_excel(output_file, sheet_name="Combined Data", index=False)
-                output_file.save()
+    output_file = pd.ExcelWriter("processed_data.xlsx", engine='xlsxwriter')
+    for sheet_name, df_unique in processed_sheets.items():
+        df_unique.to_excel(output_file, sheet_name=sheet_name, index=False)
+    combined_data.to_excel(output_file, sheet_name="Combined Data", index=False)
+    output_file.close()
 
-                with open("processed_data.xlsx", "rb") as f:
-                    st.download_button(
-                        label="Download Processed Data as Excel",
-                        data=f,
-                        file_name="processed_data.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    )
+    with open("processed_data.xlsx", "rb") as f:
+        st.download_button(
+            label="Download Processed Data as Excel",
+            data=f,
+            file_name="processed_data.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
 
         else:
             # Handle single-sheet files (CSV or single-sheet Excel)
