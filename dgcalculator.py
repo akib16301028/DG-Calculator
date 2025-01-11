@@ -91,12 +91,15 @@ if uploaded_file:
 
                 for _, mf_row in time_window.iterrows():
                     if dg_row['Site Alias'] == mf_row['Site Alias']:
+                        time_difference = (dg_row['Start Time'] - mf_row['Start Time']).total_seconds() / 60  # Time difference in minutes
                         matched_entries.append({
                             'Site Alias': dg_row['Site Alias'],
                             'Zone': dg_row['Zone'],
                             'Cluster': dg_row['Cluster'],
                             'Start Time_DG': dg_row['Start Time'],
-                            'Start Time_MainsFail': mf_row['Start Time']
+                            'Start Time_MainsFail': mf_row['Start Time'],
+                            'Time Difference (minutes)': time_difference,
+                            'Before/After': 'Before' if time_difference >= 30 else 'After' if time_difference <= -30 else 'Within 30 mins'
                         })
 
             if matched_entries:
