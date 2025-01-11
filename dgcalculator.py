@@ -48,7 +48,7 @@ if uploaded_file:
     # Find unique dates
     unique_dates = sorted(set(dg_data['Date']).union(mains_fail_data['Date']))
 
-    # Step 4: Match Data by Date and Display Results
+    # Step 4: Match Data by Date and Analyze Results
     st.header("Matched Data by Date")
     results = []
 
@@ -69,14 +69,30 @@ if uploaded_file:
                 common_sites['Difference'] = (common_sites['Start Time_DG'] - common_sites['Start Time_MainsFail']).dt.total_seconds() / 60.0
 
                 # Filter for rows where Start Time_DG is 30 or more minutes before Start Time_MainsFail
-                filtered_sites = common_sites[common_sites['Difference'] <= -30]
+                common_sites = common_sites.sort_values(by=['Site Alias', 'Start Time_DG'])
+
+                # Group by Site Alias to find the latest occurrence
+                latest_occurrences = common_sites.groupby('Site Alias').last().reset_index()
+
+                # Add a column for the number of occurrences
+                occurrences = common_sites.groupby('Site Alias').size().reset_index(name='Occurrences')
+                latest_occurrences = latest_occurrences.merge(occurrences, on='Site Alias')
+
+                # Add a column for the total time difference of all occurrences
+                total_diff = common_sites[common_sites['Difference'] <= -30].groupby('Site Alias')['Difference'].sum().reset_index(name='Total Difference (Minutes)')
+                latest_occurrences = latest_occurrences.merge(total_diff, on='Site Alias', how='left')
+                latest_occurrences['Total Difference (Minutes)'] = latest_occurrences['Total Difference (Minutes)'].fillna(0).apply(lambda x: f"{int(abs(x))} minutes")
+
+                # Filter the latest occurrences for the 30-minute condition
+                filtered_sites = latest_occurrences[latest_occurrences['Difference'] <= -30]
 
                 if not filtered_sites.empty:
                     st.subheader(f"Filtered Data for Date: {date}")
                     filtered_sites['Difference (Minutes)'] = filtered_sites['Difference'].apply(lambda x: f"{int(abs(x))} minutes")
                     st.dataframe(filtered_sites[[
                         'Site Alias', 'Zone', 'Cluster',
-                        'Start Time_DG', 'Start Time_MainsFail', 'Difference (Minutes)'
+                        'Start Time_DG', 'Start Time_MainsFail', 'Difference (Minutes)',
+                        'Occurrences', 'Total Difference (Minutes)'
                     ]])
 
                     # Store results for download
