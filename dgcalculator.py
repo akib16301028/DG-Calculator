@@ -73,9 +73,10 @@ if uploaded_file:
 
                 if not filtered_sites.empty:
                     st.subheader(f"Filtered Data for Date: {date}")
+                    filtered_sites['Difference (Minutes)'] = filtered_sites['Difference'].apply(lambda x: f"{int(abs(x))} minutes")
                     st.dataframe(filtered_sites[[
                         'Site Alias', 'Zone', 'Cluster',
-                        'Start Time_DG', 'Start Time_MainsFail', 'Difference'
+                        'Start Time_DG', 'Start Time_MainsFail', 'Difference (Minutes)'
                     ]])
 
                     # Store results for download
