@@ -51,14 +51,14 @@ def main():
                 # Save processed data for this sheet
                 processed_sheets[sheet_name] = df_unique
 
-            # Combine all processed sheets into a single DataFrame
-            combined_data = pd.concat(processed_sheets.values(), ignore_index=True)
-
-            if processed_sheets:
+          # Save processed sheets and combined data into a single Excel file
+if processed_sheets:
     output_file = pd.ExcelWriter("processed_data.xlsx", engine='xlsxwriter')
     for sheet_name, df_unique in processed_sheets.items():
         df_unique.to_excel(output_file, sheet_name=sheet_name, index=False)
     combined_data.to_excel(output_file, sheet_name="Combined Data", index=False)
+    
+    # Use close() instead of save()
     output_file.close()
 
     with open("processed_data.xlsx", "rb") as f:
@@ -68,6 +68,7 @@ def main():
             file_name="processed_data.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+
 
 
         else:
