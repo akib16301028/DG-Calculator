@@ -93,8 +93,8 @@ if uploaded_file:
                     if dg_row['Site Alias'] == mf_row['Site Alias']:
                         time_difference = (mf_row['Start Time'] - dg_row['Start Time']).total_seconds() / 60  # Time difference in minutes
                         classification = (
-                            "Before" if time_difference <= -30 else 
-                            "After" if time_difference >= 30 else 
+                            "After" if time_difference <= -30 else 
+                            "Before" if time_difference >= 30 else 
                             "Within 30 mins"
                         )
                         matched_entries.append({
@@ -103,7 +103,7 @@ if uploaded_file:
                             'Cluster': dg_row['Cluster'],
                             'Start Time_DG': dg_row['Start Time'],
                             'Start Time_MainsFail': mf_row['Start Time'],
-                            'Time Difference (minutes)': time_difference,
+                            'Time Difference (minutes)': abs(time_difference),
                             'Before/After': classification
                         })
 
