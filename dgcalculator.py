@@ -101,18 +101,26 @@ if uploaded_file:
                 # Store results for download
                 results.append((date, matched_df))
 
-    # Step 5: Provide Download Option
-    if results:
-        with pd.ExcelWriter("filtered_data.xlsx") as writer:
-            for date, result in results:
-                result.to_excel(writer, sheet_name=str(date), index=False)
+   # Step 5: Provide Download Option
+if results:
+    # Combine all results into a single DataFrame
+    combined_data = pd.concat([result for _, result in results], ignore_index=True)
 
-        with open("filtered_data.xlsx", "rb") as file:
-            st.download_button(
-                label="Download Filtered Data",
-                data=file,
-                file_name="filtered_data.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-    else:
-        st.info("No Site Alias found with the specified time difference condition.")
+    with pd.ExcelWriter("filtered_data.xlsx") as writer:
+        # Write the combined data to a single sheet
+        combined_data.to_excel(writer, sheet_name="All Dates", index=False)
+        
+        # Write each date's data to separate sheets
+        for date, result in results:
+            result.to_excel(writer, sheet_name=str(date), index=False)
+
+    # Allow the user to download the file
+    with open("filtered_data.xlsx", "rb") as file:
+        st.download_button(
+            label="Download Filtered Data",
+            data=file,
+            file_name="filtered_data.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+else:
+    st.info("No Site Alias found with the specified time difference condition.")
