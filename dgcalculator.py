@@ -32,10 +32,10 @@ if uploaded_file:
         st.stop()
 
     # Step 3: Convert Start Time and End Time to datetime and handle errors
-    dg_data['Start Time'] = pd.to_datetime(dg_data['Start Time'], errors='coerce')
-    dg_data['End Time'] = pd.to_datetime(dg_data['End Time'], errors='coerce')
-    mains_fail_data['Start Time'] = pd.to_datetime(mains_fail_data['Start Time'], errors='coerce')
-    mains_fail_data['End Time'] = pd.to_datetime(mains_fail_data['End Time'], errors='coerce')
+    dg_data['Start Time'] = pd.to_datetime(dg_data['Start Time'], format='%m/%d/%y %H:%M', errors='coerce')
+    dg_data['End Time'] = pd.to_datetime(dg_data['End Time'], format='%m/%d/%y %H:%M', errors='coerce')
+    mains_fail_data['Start Time'] = pd.to_datetime(mains_fail_data['Start Time'], format='%m/%d/%y %H:%M', errors='coerce')
+    mains_fail_data['End Time'] = pd.to_datetime(mains_fail_data['End Time'], format='%m/%d/%y %H:%M', errors='coerce')
 
     # Drop rows with invalid or missing Start Time or End Time
     dg_data = dg_data.dropna(subset=['Start Time', 'End Time'])
@@ -44,6 +44,10 @@ if uploaded_file:
     # Extract the date part
     dg_data['Date'] = dg_data['Start Time'].dt.date
     mains_fail_data['Date'] = mains_fail_data['Start Time'].dt.date
+
+    # Sort data by Start Time
+    dg_data = dg_data.sort_values(by=['Date', 'Start Time'])
+    mains_fail_data = mains_fail_data.sort_values(by=['Date', 'Start Time'])
 
     # Find unique dates
     unique_dates = sorted(set(dg_data['Date']).union(mains_fail_data['Date']))
@@ -69,8 +73,8 @@ if uploaded_file:
                 st.subheader(f"Date: {date}")
                 st.dataframe(mains_fail_filtered)
 
-    # Step 4: Match Data by Date and Display Results
-    st.header("Matched Data by Date")
+    # Step 4: Match Data by Date and Nearest Start Time
+    st.header("Matched Data by Date and Nearest Time")
     results = []
 
     for date in unique_dates:
@@ -78,22 +82,29 @@ if uploaded_file:
         mains_fail_filtered = mains_fail_data[mains_fail_data['Date'] == date]
 
         if not dg_filtered.empty and not mains_fail_filtered.empty:
-            # Find common Site Alias and corresponding Zone, Cluster, Start Time
-            matched_sites = pd.merge(
-                dg_filtered, mains_fail_filtered,
-                on=['Site Alias', 'Zone', 'Cluster'],
-                suffixes=('_DG', '_MainsFail')
-            )
+            matched_entries = []
 
-            if not matched_sites.empty:
+            for _, dg_row in dg_filtered.iterrows():
+                # Find the nearest Start Time in Mains Fail data
+                mains_fail_row = mains_fail_filtered.iloc[(mains_fail_filtered['Start Time'] - dg_row['Start Time']).abs().argsort()[:1]]
+
+                for _, mf_row in mains_fail_row.iterrows():
+                    if dg_row['Site Alias'] == mf_row['Site Alias']:
+                        matched_entries.append({
+                            'Site Alias': dg_row['Site Alias'],
+                            'Zone': dg_row['Zone'],
+                            'Cluster': dg_row['Cluster'],
+                            'Start Time_DG': dg_row['Start Time'],
+                            'Start Time_MainsFail': mf_row['Start Time']
+                        })
+
+            if matched_entries:
+                matched_df = pd.DataFrame(matched_entries)
                 st.subheader(f"Matched Data for Date: {date}")
-                st.dataframe(matched_sites[[
-                    'Site Alias', 'Zone', 'Cluster',
-                    'Start Time_DG', 'Start Time_MainsFail'
-                ]])
+                st.dataframe(matched_df)
 
                 # Store results for download
-                results.append((date, matched_sites))
+                results.append((date, matched_df))
 
     # Step 5: Provide Download Option
     if results:
@@ -109,4 +120,4 @@ if uploaded_file:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
     else:
-        st.info("No common Site Alias found for any date.")
+        st.info("No matches found for any date.")
