@@ -25,6 +25,9 @@ if uploaded_file:
             st.error(f"Sheet '{sheet_name}' does not contain the required columns.")
             continue
 
+        # Filter rows where "Before/After" column contains "High DG"
+        df = df[df["Before/After"] == "High DG"]
+
         # Remove duplicates, keeping the row with the lowest Time Difference (minutes)
         df_processed = df.sort_values(by="Time Difference (minutes)").drop_duplicates(subset="Site Alias", keep="first")
 
