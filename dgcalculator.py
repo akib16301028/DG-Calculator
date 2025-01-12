@@ -26,7 +26,7 @@ if uploaded_file:
             continue
 
         # Remove duplicates, keeping the row with the lowest Time Difference (minutes)
-        df_processed = df.loc[df.groupby("Site Alias")["Time Difference (minutes)"].idxmin()]
+        df_processed = df.sort_values(by="Time Difference (minutes)").drop_duplicates(subset="Site Alias", keep="first")
 
         # Store the processed DataFrame
         processed_sheets[sheet_name] = df_processed
