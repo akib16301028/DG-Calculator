@@ -49,7 +49,7 @@ if uploaded_file:
         for sheet_name, processed_df in processed_sheets.items():
             processed_df.to_excel(output_file, index=False, sheet_name=sheet_name)
         combined_df.to_excel(output_file, index=False, sheet_name="Combined Data")
-        output_file.save()
+        output_file.close()
 
         with open("processed_data.xlsx", "rb") as f:
             st.download_button(
@@ -58,4 +58,3 @@ if uploaded_file:
                 file_name="processed_data.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
- 
