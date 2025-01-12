@@ -32,10 +32,10 @@ if uploaded_file:
         st.stop()
 
     # Step 3: Convert Start Time and End Time to datetime and handle errors
-    dg_data['Start Time'] = pd.to_datetime(dg_data['Start Time'], format='%m/%d/%y %H:%M', errors='coerce')
-    dg_data['End Time'] = pd.to_datetime(dg_data['End Time'], format='%m/%d/%y %H:%M', errors='coerce')
-    mains_fail_data['Start Time'] = pd.to_datetime(mains_fail_data['Start Time'], format='%m/%d/%y %H:%M', errors='coerce')
-    mains_fail_data['End Time'] = pd.to_datetime(mains_fail_data['End Time'], format='%m/%d/%y %H:%M', errors='coerce')
+    dg_data['Start Time'] = pd.to_datetime(dg_data['Start Time'], format='%d/%m/%Y %H:%M', errors='coerce')
+    dg_data['End Time'] = pd.to_datetime(dg_data['End Time'], format='%d/%m/%Y %H:%M', errors='coerce')
+    mains_fail_data['Start Time'] = pd.to_datetime(mains_fail_data['Start Time'], format='%d/%m/%Y %H:%M', errors='coerce')
+    mains_fail_data['End Time'] = pd.to_datetime(mains_fail_data['End Time'], format='%d/%m/%Y %H:%M', errors='coerce')
 
     # Drop rows with invalid or missing Start Time or End Time
     dg_data = dg_data.dropna(subset=['Start Time', 'End Time'])
