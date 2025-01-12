@@ -25,11 +25,15 @@ if uploaded_file:
             st.error(f"Sheet '{sheet_name}' does not contain the required columns.")
             continue
 
-        # Filter rows where "Before/After" column contains "High DG"
-        df = df[df["Before/After"] == "High DG"]
+        # Separate rows based on "Before/After" values
+        high_dg = df[df["Before/After"] == "High DG"]
+        other_rows = df[df["Before/After"] != "High DG"]
 
-        # Remove duplicates, keeping the row with the lowest Time Difference (minutes)
-        df_processed = df.sort_values(by="Time Difference (minutes)").drop_duplicates(subset="Site Alias", keep="first")
+        # Remove duplicates from "High DG", keeping the row with the lowest Time Difference (minutes)
+        high_dg_processed = high_dg.sort_values(by="Time Difference (minutes)").drop_duplicates(subset="Site Alias", keep="first")
+
+        # Combine "High DG" processed rows with other rows
+        df_processed = pd.concat([high_dg_processed, other_rows], ignore_index=True)
 
         # Store the processed DataFrame
         processed_sheets[sheet_name] = df_processed
