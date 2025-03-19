@@ -24,8 +24,7 @@ if uploaded_file:
     # Ensure required columns are present
     required_columns = [
         "Rms Station", "Site", "Site Alias", "Zone", "Cluster", "Node",
-        "Start Time", "End Time", "Elapsed Time", "Acknowledgement",
-        "AcknowledgedTime", "AcknowledgedBy"
+        "Start Time", "End Time", "Elapsed Time"
     ]
 
     # Debugging: Show available columns
