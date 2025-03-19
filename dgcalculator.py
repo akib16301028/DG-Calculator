@@ -12,6 +12,11 @@ if uploaded_file:
     try:
         dg_data = pd.read_excel(uploaded_file, sheet_name='DG')
         mains_fail_data = pd.read_excel(uploaded_file, sheet_name='Mains Fail')
+
+        # Trim spaces and normalize column names
+        dg_data.columns = dg_data.columns.str.strip()
+        mains_fail_data.columns = mains_fail_data.columns.str.strip()
+
     except Exception as e:
         st.error(f"Error reading sheets: {e}")
         st.stop()
@@ -23,12 +28,16 @@ if uploaded_file:
         "AcknowledgedTime", "AcknowledgedBy"
     ]
 
+    # Debugging: Show available columns
+    st.write("DG Data Columns:", list(dg_data.columns))
+    st.write("Mains Fail Data Columns:", list(mains_fail_data.columns))
+
     if not all(col in dg_data.columns for col in required_columns):
-        st.error("The DG sheet does not have the required columns.")
+        st.error("The DG sheet does not have the required columns. Please check column names for spaces or typos.")
         st.stop()
 
     if not all(col in mains_fail_data.columns for col in required_columns):
-        st.error("The Mains Fail sheet does not have the required columns.")
+        st.error("The Mains Fail sheet does not have the required columns. Please check column names for spaces or typos.")
         st.stop()
 
     # Step 3: Convert Start Time and End Time to datetime and handle errors
@@ -84,29 +93,30 @@ if uploaded_file:
         if not dg_filtered.empty and not mains_fail_filtered.empty:
             matched_entries = []
 
-            for _, mf_row in mains_fail_filtered.iterrows():
-                # Filter DG data within a 2-hour window of Mains Fail Start Time
-                time_window = dg_filtered[(dg_filtered['Start Time'] >= mf_row['Start Time'] - pd.Timedelta(hours=2)) &
-                                          (dg_filtered['Start Time'] <= mf_row['Start Time'] + pd.Timedelta(hours=2))]
+            for _, dg_row in dg_filtered.iterrows():
+                # Filter Mains Fail data within a 2-hour window of DG Start Time
+                time_window = mains_fail_filtered[
+                    (mains_fail_filtered['Start Time'] >= dg_row['Start Time'] - pd.Timedelta(hours=2)) &
+                    (mains_fail_filtered['Start Time'] <= dg_row['Start Time'] + pd.Timedelta(hours=2))
+                ]
 
-                for _, dg_row in time_window.iterrows():
+                for _, mf_row in time_window.iterrows():
                     if dg_row['Site Alias'] == mf_row['Site Alias']:
-                        time_difference = (mf_row['Start Time'] - dg_row['Start Time']).total_seconds() / 60  # Time difference in minutes
+                        time_difference = (dg_row['Start Time'] - mf_row['Start Time']).total_seconds() / 60  # Time difference in minutes
                         classification = (
-                            "MF before DG (>= 30 mins)" if time_difference >= 30 else 
-                            "MF starts close to DG" if time_difference > 0 else 
-                            "Overlap or DG starts first"
+                            "DG after MF" if time_difference >= 30 else
+                            "High DG" if time_difference <= -30 else
+                            "Within 30 mins"
                         )
-                        if time_difference >= 0:  # Only consider cases where MF starts before DG
-                            matched_entries.append({
-                                'Site Alias': dg_row['Site Alias'],
-                                'Zone': dg_row['Zone'],
-                                'Cluster': dg_row['Cluster'],
-                                'Start Time_DG': dg_row['Start Time'],
-                                'Start Time_MainsFail': mf_row['Start Time'],
-                                'Time Difference (minutes)': abs(time_difference),
-                                'Before/After': classification
-                            })
+                        matched_entries.append({
+                            'Site Alias': dg_row['Site Alias'],
+                            'Zone': dg_row['Zone'],
+                            'Cluster': dg_row['Cluster'],
+                            'Start Time_DG': dg_row['Start Time'],
+                            'Start Time_MainsFail': mf_row['Start Time'],
+                            'Time Difference (minutes)': abs(time_difference),
+                            'Before/After': classification
+                        })
 
             if matched_entries:
                 matched_df = pd.DataFrame(matched_entries)
